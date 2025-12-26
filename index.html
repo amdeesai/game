@@ -77,10 +77,10 @@ button {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, remove } 
+import { getDatabase, ref, push, onChildAdded, remove }
 from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-/* 🔥 YOUR FIREBASE CONFIG (USED AS-IS) */
+/* 🔥 FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDPyVRbm51b-h2uN1f5bjG5pem7QglCWuQ",
   authDomain: "game-e868c.firebaseapp.com",
@@ -91,15 +91,25 @@ const firebaseConfig = {
   appId: "1:926817357502:web:3d9da5b0a00d31604258ef"
 };
 
+/* 🔧 INIT */
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-let roomRef;
-let username;
+/* ✅ DOM ELEMENTS (FIXED) */
+const loginDiv = document.getElementById("login");
+const chatDiv = document.getElementById("chat");
+const nameInput = document.getElementById("name");
+const roomInput = document.getElementById("room");
+const msgInput = document.getElementById("msg");
+const messagesDiv = document.getElementById("messages");
 
+let roomRef = null;
+let username = "";
+
+/* 🚪 JOIN CHAT */
 window.join = () => {
-  username = name.value.trim();
-  const roomCode = room.value.trim();
+  username = nameInput.value.trim();
+  const roomCode = roomInput.value.trim();
 
   if (!username || !roomCode) {
     alert("Enter name and secret code");
@@ -108,32 +118,35 @@ window.join = () => {
 
   roomRef = ref(db, "vanishChats/" + roomCode);
 
-  login.style.display = "none";
-  chat.style.display = "flex";
+  loginDiv.style.display = "none";
+  chatDiv.style.display = "flex";
 
   onChildAdded(roomRef, snapshot => {
     const data = snapshot.val();
+    if (!data) return;
+
     const div = document.createElement("div");
     div.className = "msg" + (data.user === username ? " me" : "");
     div.textContent = data.user + ": " + data.text;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 };
 
+/* 📤 SEND MESSAGE */
 window.send = () => {
-  if (!msg.value.trim()) return;
+  if (!msgInput.value.trim() || !roomRef) return;
 
   push(roomRef, {
     user: username,
-    text: msg.value,
+    text: msgInput.value.trim(),
     time: Date.now()
   });
 
-  msg.value = "";
+  msgInput.value = "";
 };
 
-/* 🔥 VANISH MODE: DELETE CHAT ON EXIT / REFRESH */
+/* 🔥 VANISH MODE */
 window.addEventListener("beforeunload", () => {
   if (roomRef) remove(roomRef);
 });
