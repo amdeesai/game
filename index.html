@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Secret Vanish Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #ece5dd;
+}
+#login, #chat {
+  max-width: 420px;
+  margin: auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+#login {
+  justify-content: center;
+  padding: 20px;
+}
+input, button {
+  padding: 12px;
+  margin: 6px 0;
+  font-size: 16px;
+}
+button {
+  background: #25d366;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+.msg {
+  background: #dcf8c6;
+  padding: 8px 12px;
+  margin: 6px 0;
+  border-radius: 8px;
+  max-width: 80%;
+}
+.me {
+  margin-left: auto;
+  background: #a8e6cf;
+}
+#sendBox {
+  display: flex;
+}
+#sendBox input {
+  flex: 1;
+}
+</style>
+</head>
+
+<body>
+
+<div id="login">
+  <h2>🔐 Secret Vanish Chat</h2>
+  <input id="name" placeholder="Your name">
+  <input id="room" placeholder="Secret code">
+  <button onclick="join()">Join Chat</button>
+</div>
+
+<div id="chat" style="display:none;">
+  <div id="messages"></div>
+  <div id="sendBox">
+    <input id="msg" placeholder="Type message...">
+    <button onclick="send()">Send</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded, remove } 
+from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+/* 🔥 YOUR FIREBASE CONFIG (USED AS-IS) */
+const firebaseConfig = {
+  apiKey: "AIzaSyDPyVRbm51b-h2uN1f5bjG5pem7QglCWuQ",
+  authDomain: "game-e868c.firebaseapp.com",
+  databaseURL: "https://game-e868c-default-rtdb.firebaseio.com",
+  projectId: "game-e868c",
+  storageBucket: "game-e868c.firebasestorage.app",
+  messagingSenderId: "926817357502",
+  appId: "1:926817357502:web:3d9da5b0a00d31604258ef"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let roomRef;
+let username;
+
+window.join = () => {
+  username = name.value.trim();
+  const roomCode = room.value.trim();
+
+  if (!username || !roomCode) {
+    alert("Enter name and secret code");
+    return;
+  }
+
+  roomRef = ref(db, "vanishChats/" + roomCode);
+
+  login.style.display = "none";
+  chat.style.display = "flex";
+
+  onChildAdded(roomRef, snapshot => {
+    const data = snapshot.val();
+    const div = document.createElement("div");
+    div.className = "msg" + (data.user === username ? " me" : "");
+    div.textContent = data.user + ": " + data.text;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  });
+};
+
+window.send = () => {
+  if (!msg.value.trim()) return;
+
+  push(roomRef, {
+    user: username,
+    text: msg.value,
+    time: Date.now()
+  });
+
+  msg.value = "";
+};
+
+/* 🔥 VANISH MODE: DELETE CHAT ON EXIT / REFRESH */
+window.addEventListener("beforeunload", () => {
+  if (roomRef) remove(roomRef);
+});
+</script>
+
+</body>
+</html>
