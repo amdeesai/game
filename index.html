@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Secure Chat</title>
+<title>Secure 1-to-1 Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -22,48 +22,31 @@ body {
 .header {
   background: #075e54;
   color: white;
-  padding: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #ccc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 14px;
+  text-align: center;
   font-weight: bold;
-}
-.partner {
-  flex: 1;
-}
-.typing {
-  font-size: 12px;
-  opacity: 0.8;
 }
 #login, #waiting, #chat {
   flex: 1;
   display: none;
   flex-direction: column;
+  justify-content: center;
+  padding: 20px;
 }
-#login { display: flex; justify-content: center; padding: 20px; }
-#waiting { justify-content: center; align-items: center; }
+#login { display: flex; }
 
-input, button {
-  padding: 10px;
+input {
+  padding: 12px;
+  margin: 6px 0;
   font-size: 16px;
-  margin: 4px 0;
 }
 button {
+  padding: 12px;
   background: #25d366;
   border: none;
   color: white;
   cursor: pointer;
 }
-
 #messages {
   flex: 1;
   padding: 10px;
@@ -71,10 +54,10 @@ button {
   background: #efeae2;
 }
 .msg {
-  max-width: 75%;
   padding: 8px 12px;
   margin: 6px 0;
   border-radius: 8px;
+  max-width: 75%;
 }
 .sent {
   background: #dcf8c6;
@@ -82,23 +65,15 @@ button {
 }
 .received {
   background: #fff;
+  margin-right: auto;
 }
-
 #sendBox {
   display: flex;
-  align-items: center;
-  gap: 4px;
   padding: 8px;
+  background: #f0f0f0;
 }
-#sendBox input[type="text"] {
+#sendBox input {
   flex: 1;
-}
-#file {
-  display: none;
-}
-.media {
-  max-width: 100%;
-  border-radius: 6px;
 }
 </style>
 </head>
@@ -106,6 +81,7 @@ button {
 <body>
 
 <div class="container">
+  <div class="header">🔐 Secure Chat</div>
 
   <div id="login">
     <input id="name" placeholder="Your name">
@@ -114,159 +90,104 @@ button {
   </div>
 
   <div id="waiting">
-    <h3>⏳ Waiting for other user…</h3>
+    <h3 style="text-align:center;">⏳ Waiting for other user…</h3>
   </div>
 
   <div id="chat">
-    <div class="header">
-      <div class="avatar">👤</div>
-      <div class="partner">
-        <div id="partnerName">Partner</div>
-        <div class="typing" id="typing"></div>
-      </div>
-    </div>
-
     <div id="messages"></div>
-
     <div id="sendBox">
-      <label for="file">📎</label>
-      <input type="file" id="file" accept="image/*,video/*">
-      <input id="msg" type="text" placeholder="Type message">
-      <button onclick="sendMessage()">Send</button>
+      <input id="msg" placeholder="Type message & press Enter">
     </div>
   </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, set, update, push, onValue, onChildAdded }
-from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL }
-from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+import {
+  getDatabase, ref, get, set, update, push, onValue, onChildAdded
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDPyVRbm51b-h2uN1f5bjG5pem7QglCWuQ",
   authDomain: "game-e868c.firebaseapp.com",
   databaseURL: "https://game-e868c-default-rtdb.firebaseio.com",
   projectId: "game-e868c",
-  storageBucket: "game-e868c.appspot.com",
+  storageBucket: "game-e868c.firebasestorage.app",
   messagingSenderId: "926817357502",
   appId: "1:926817357502:web:3d9da5b0a00d31604258ef"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const storage = getStorage(app);
 
-const login = document.getElementById("login");
-const waiting = document.getElementById("waiting");
-const chat = document.getElementById("chat");
-const messages = document.getElementById("messages");
+/* DOM */
+const loginDiv = document.getElementById("login");
+const waitingDiv = document.getElementById("waiting");
+const chatDiv = document.getElementById("chat");
+const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msg");
-const typingDiv = document.getElementById("typing");
-const partnerNameDiv = document.getElementById("partnerName");
 
-let username, roomCode, roomRef, messagesRef, typingRef, usersRef;
+let username, roomCode, roomRef, messagesRef;
 
+/* JOIN CHAT */
 window.joinChat = async () => {
-  username = name.value.trim();
-  roomCode = room.value.trim();
+  username = document.getElementById("name").value.trim();
+  roomCode = document.getElementById("room").value.trim();
   if (!username || !roomCode) return alert("Enter all fields");
 
   roomRef = ref(db, `rooms/${roomCode}`);
-  usersRef = ref(db, `rooms/${roomCode}/users`);
   messagesRef = ref(db, `rooms/${roomCode}/messages`);
-  typingRef = ref(db, `rooms/${roomCode}/typing`);
 
-  login.style.display = "none";
-  waiting.style.display = "flex";
+  loginDiv.style.display = "none";
+  waitingDiv.style.display = "flex";
 
-  const snap = await fetchUsers();
-  if (!snap) await set(roomRef, { status: "waiting" });
-  else await update(roomRef, { status: "active" });
+  const snap = await get(roomRef);
 
-  push(usersRef, username);
+  if (!snap.exists()) {
+    /* First user */
+    await set(roomRef, {
+      status: "waiting"
+    });
+  } else {
+    /* Second user */
+    await update(roomRef, {
+      status: "active"
+    });
+  }
 
-  onValue(ref(db, `rooms/${roomCode}/status`), s => {
-    if (s.val() === "active") {
-      waiting.style.display = "none";
-      chat.style.display = "flex";
+  /* LISTEN ROOM STATUS */
+  onValue(ref(db, `rooms/${roomCode}/status`), snap => {
+    if (snap.val() === "active") {
+      waitingDiv.style.display = "none";
+      chatDiv.style.display = "flex";
       listenMessages();
-      listenTyping();
-      showPartnerName();
     }
   });
 };
 
-function fetchUsers() {
-  return new Promise(resolve => {
-    onValue(usersRef, s => resolve(s.exists()), { onlyOnce: true });
-  });
-}
-
-function showPartnerName() {
-  onValue(usersRef, s => {
-    const users = Object.values(s.val() || {});
-    const partner = users.find(u => u !== username);
-    if (partner) partnerNameDiv.textContent = partner;
-  });
-}
-
+/* MESSAGES */
 function listenMessages() {
-  onChildAdded(messagesRef, s => {
-    const m = s.val();
+  onChildAdded(messagesRef, snap => {
+    const m = snap.val();
     const div = document.createElement("div");
     div.className = "msg " + (m.user === username ? "sent" : "received");
-
-    if (m.type === "text") div.textContent = m.text;
-    else {
-      const el = document.createElement(m.type === "image" ? "img" : "video");
-      el.src = m.url;
-      el.className = "media";
-      if (m.type === "video") el.controls = true;
-      div.appendChild(el);
-    }
-
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
+    div.textContent = m.text;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 }
 
-window.sendMessage = () => {
-  if (!msgInput.value.trim()) return;
-  push(messagesRef, { user: username, text: msgInput.value, type: "text" });
-  msgInput.value = "";
-};
-
+/* SEND MESSAGE */
 msgInput.addEventListener("keydown", e => {
-  update(typingRef, { [username]: true });
-  setTimeout(() => update(typingRef, { [username]: false }), 800);
-
-  if (e.key === "Enter") sendMessage();
-});
-
-function listenTyping() {
-  onValue(typingRef, s => {
-    const t = s.val() || {};
-    typingDiv.textContent = Object.keys(t).some(u => u !== username && t[u])
-      ? "Typing..."
-      : "";
-  });
-}
-
-document.getElementById("file").addEventListener("change", async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const refPath = sRef(storage, `uploads/${roomCode}/${Date.now()}_${file.name}`);
-  await uploadBytes(refPath, file);
-  const url = await getDownloadURL(refPath);
-
-  push(messagesRef, {
-    user: username,
-    type: file.type.startsWith("image") ? "image" : "video",
-    url
-  });
+  if (e.key === "Enter" && msgInput.value.trim()) {
+    push(messagesRef, {
+      user: username,
+      text: msgInput.value.trim(),
+      time: Date.now()
+    });
+    msgInput.value = "";
+  }
 });
 </script>
 
