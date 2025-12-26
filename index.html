@@ -26,13 +26,24 @@ body {
   text-align: center;
   font-weight: bold;
 }
-#login, #waiting, #chat {
+
+/* ✅ FIXED VISIBILITY */
+#login {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px;
+}
+
+#waiting, #chat {
   flex: 1;
   display: none;
   flex-direction: column;
   justify-content: center;
   padding: 20px;
 }
+
 input {
   padding: 12px;
   margin: 6px 0;
@@ -83,16 +94,19 @@ button {
 <div class="container">
   <div class="header">🔐 Secure Chat</div>
 
+  <!-- ✅ LOGIN VISIBLE -->
   <div id="login">
     <input id="name" placeholder="Your name">
     <input id="room" placeholder="Secret code">
     <button onclick="joinChat()">Join Chat</button>
   </div>
 
+  <!-- ⏳ WAITING -->
   <div id="waiting">
     <h3>⏳ Waiting for other user to join…</h3>
   </div>
 
+  <!-- 💬 CHAT -->
   <div id="chat">
     <div id="messages"></div>
     <div id="sendBox">
@@ -103,7 +117,7 @@ button {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, onChildAdded } 
+import { getDatabase, ref, set, push, onValue, onChildAdded }
 from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 /* 🔥 FIREBASE CONFIG */
@@ -129,17 +143,16 @@ const msgInput = document.getElementById("msg");
 
 let username = "";
 let roomCode = "";
-let roomRef, usersRef, messagesRef;
+let usersRef, messagesRef;
 
-/* JOIN CHAT */
+/* 🚪 JOIN CHAT */
 window.joinChat = () => {
   username = document.getElementById("name").value.trim();
   roomCode = document.getElementById("room").value.trim();
   if (!username || !roomCode) return alert("Enter all fields");
 
-  roomRef = ref(db, "rooms/" + roomCode);
-  usersRef = ref(db, "rooms/" + roomCode + "/users");
-  messagesRef = ref(db, "rooms/" + roomCode + "/messages");
+  usersRef = ref(db, `rooms/${roomCode}/users`);
+  messagesRef = ref(db, `rooms/${roomCode}/messages`);
 
   set(ref(db, `rooms/${roomCode}/users/${username}`), true);
 
@@ -156,7 +169,7 @@ window.joinChat = () => {
   });
 };
 
-/* LISTEN MESSAGES */
+/* 💬 LISTEN MESSAGES */
 function listenMessages() {
   onChildAdded(messagesRef, snap => {
     const m = snap.val();
@@ -168,7 +181,7 @@ function listenMessages() {
   });
 }
 
-/* SEND MESSAGE WITH ENTER */
+/* ⌨ SEND WITH ENTER */
 msgInput.addEventListener("keydown", e => {
   if (e.key === "Enter" && msgInput.value.trim()) {
     push(messagesRef, {
