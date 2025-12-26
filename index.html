@@ -8,7 +8,7 @@
 <style>
 body {
   margin: 0;
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: Arial, sans-serif;
   background: #e5ddd5;
 }
 .container {
@@ -26,18 +26,15 @@ body {
   text-align: center;
   font-weight: bold;
 }
-#login {
+#login, #waiting, #chat {
   flex: 1;
-  display: flex;
+  display: none;
   flex-direction: column;
   justify-content: center;
   padding: 20px;
 }
-#waiting, #chat {
-  flex: 1;
-  display: none;
-  flex-direction: column;
-}
+#login { display: flex; }
+
 input {
   padding: 12px;
   margin: 6px 0;
@@ -48,7 +45,6 @@ button {
   background: #25d366;
   border: none;
   color: white;
-  font-size: 16px;
   cursor: pointer;
 }
 #messages {
@@ -94,13 +90,13 @@ button {
   </div>
 
   <div id="waiting">
-    <h3 style="text-align:center;">⏳ Waiting for other user to join…</h3>
+    <h3 style="text-align:center;">⏳ Waiting for other user…</h3>
   </div>
 
   <div id="chat">
     <div id="messages"></div>
     <div id="sendBox">
-      <input id="msg" placeholder="Type message and press Enter">
+      <input id="msg" placeholder="Type message & press Enter">
     </div>
   </div>
 </div>
@@ -108,10 +104,10 @@ button {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
-  getDatabase, ref, push, onValue, onChildAdded, onDisconnect
+  getDatabase, ref, get, set, update, push, onValue, onChildAdded
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-/* 🔥 FIREBASE CONFIG */
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDPyVRbm51b-h2uN1f5bjG5pem7QglCWuQ",
   authDomain: "game-e868c.firebaseapp.com",
@@ -132,35 +128,37 @@ const chatDiv = document.getElementById("chat");
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msg");
 
-let username = "";
-let roomCode = "";
-let usersRef, messagesRef;
+let username, roomCode, roomRef, messagesRef;
 
-/* 🚪 JOIN CHAT */
-window.joinChat = () => {
+/* JOIN CHAT */
+window.joinChat = async () => {
   username = document.getElementById("name").value.trim();
   roomCode = document.getElementById("room").value.trim();
   if (!username || !roomCode) return alert("Enter all fields");
 
-  usersRef = ref(db, `rooms/${roomCode}/users`);
+  roomRef = ref(db, `rooms/${roomCode}`);
   messagesRef = ref(db, `rooms/${roomCode}/messages`);
-
-  /* ✅ PUSH USER (UNIQUE ID) */
-  const userRef = push(usersRef, {
-    name: username,
-    joinedAt: Date.now()
-  });
-
-  /* AUTO REMOVE USER ON DISCONNECT */
-  onDisconnect(userRef).remove();
 
   loginDiv.style.display = "none";
   waitingDiv.style.display = "flex";
 
-  /* 👥 WAIT UNTIL 2 USERS */
-  onValue(usersRef, snap => {
-    const users = snap.val() || {};
-    if (Object.keys(users).length >= 2) {
+  const snap = await get(roomRef);
+
+  if (!snap.exists()) {
+    /* First user */
+    await set(roomRef, {
+      status: "waiting"
+    });
+  } else {
+    /* Second user */
+    await update(roomRef, {
+      status: "active"
+    });
+  }
+
+  /* LISTEN ROOM STATUS */
+  onValue(ref(db, `rooms/${roomCode}/status`), snap => {
+    if (snap.val() === "active") {
       waitingDiv.style.display = "none";
       chatDiv.style.display = "flex";
       listenMessages();
@@ -168,7 +166,7 @@ window.joinChat = () => {
   });
 };
 
-/* 💬 MESSAGE LISTENER */
+/* MESSAGES */
 function listenMessages() {
   onChildAdded(messagesRef, snap => {
     const m = snap.val();
@@ -180,7 +178,7 @@ function listenMessages() {
   });
 }
 
-/* ⌨ SEND MESSAGE WITH ENTER */
+/* SEND MESSAGE */
 msgInput.addEventListener("keydown", e => {
   if (e.key === "Enter" && msgInput.value.trim()) {
     push(messagesRef, {
